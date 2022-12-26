@@ -17,6 +17,7 @@
 //!     .giveup("Missing configuration file")
 //! ```
 //!
+//! ## Motivation
 //! In this scenario `expect` is misplaced because we don't want
 //! the user of the cli to be confronted with a `panic`.
 //! 
@@ -43,7 +44,7 @@
 //!
 //! ## Feedback
 //!
-//! I primarily wrote `giveup` for my personal use but I would love
+//! I primarily wrote `giveup` for my personal use so I would love
 //! to get your [feedback](https://github.com/d4ckard/giveup/issues).
 //!
 //!
