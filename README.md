@@ -17,15 +17,15 @@ let config = Config::read(/*config-path*/)
 ```
 
 ## Motivation
-In this scenario `expect` is misplaced because we don't want
+In the above scenario `expect` is misplaced because we don't want
 the user of the cli to be confronted with a `panic`.
 
-To goal is to display a nicely readable error messag and offer
+To goal is to display an easily readable error messag and offer
 as much help as possible, so the user can get back to what
 they originally intended to do (which never is fixing some issues
 of the tool one is using).
 
-My usual solution to this looks somewhat like this: 
+My usual solution would look somewhat like this: 
 ```rust
 let config = Config::read(/*config-path*/).unwrap_or_else(|err| {
     eprintln!("Missing configuration file: {}\n \
