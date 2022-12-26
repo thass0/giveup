@@ -1,7 +1,12 @@
+/// Add an example message to an object.
 pub trait Example<'a> {
+	/// Consumes and returns `self` combined with the
+	/// given `example` message.
 	fn example(self, example: &'a str) -> Self;
 }
 
+/// Implementation of `Example` on any `Result`s returned by
+/// [`hint`](crate::Giveup::hint)
 impl<'a, T, E> Example<'a> for Result<T, HintedError<'a, E>>
 where
 	E: std::fmt::Display + Send + Sync,
