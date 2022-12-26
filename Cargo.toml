@@ -1,9 +1,13 @@
 [package]
 name = "giveup"
+license = "MIT"
+description = "User-geared error messages and hints"
 version = "0.1.0"
+authors = ["Deckard"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+repository = "https://github.com/d4ckard/giveup"
+keywords = ["errors", "cli", "hints"]
+categories = ["command-line-interface", "rust-patterns"]
 
 [dependencies]
 colored = "2"
