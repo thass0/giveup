@@ -8,13 +8,16 @@
 //!
 //! ## Example
 //!
-//! ```rust
+//! ```rust should_panic
+//! # use std::fs::File;
+//! # use giveup::{Giveup, Example};
 //! // Here reading the config at the start of the cli app
 //! // fails because the user has not yet created a config file.
-//! let config = Config::read(/*config-path*/)
+//! 
+//! let config_file = File::open("config-path")
 //!     .hint("Create a configuration file")
 //!     .example("touch config-filename")
-//!     .giveup("Missing configuration file")
+//!     .giveup("Missing configuration file");
 //! ```
 //!
 //! ## Motivation
@@ -27,9 +30,10 @@
 //! of the tool one is using).
 //! My usual solution would look somewhat like this:
 //!  
-//! ```rust
-//! let config = Config::read(/*config-path*/).unwrap_or_else(|err| {
-//!     eprintln!("Missing configuration file: {}\n \
+//! ```rust should_panic
+//! # use std::fs::File;
+//! let config = File::open("config-path").unwrap_or_else(|err| {
+//!     eprintln!("Missing configuration file: {}\n\
 //!         Create a new configuration file: `touch config-filename`",
 //!         err);
 //!     std::process::exit(1);
@@ -51,5 +55,5 @@
 
 mod giveup;
 mod hint;
-pub use giveup::Giveup;
-pub use hint::Example;
+pub use crate::giveup::Giveup;
+pub use crate::hint::Example;
