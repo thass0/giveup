@@ -4,7 +4,7 @@ use colored::Colorize;
 /// User-geared program termination.
 pub trait Giveup<T, E>
 where
-	E: std::fmt::Display + Send + Sync,
+	E: GiveupFormatError,
 {
 	/// Terminate the program gracefully and display a user-geared
 	/// error message.
@@ -31,13 +31,13 @@ where
 
 impl<T, E> Giveup<T, E> for Result<T, E>
 where
-	E: std::error::Error + Send + Sync,
+	E: GiveupFormatError,
 {
 	fn giveup(self, msg: &str) -> T {
 		match self {
 			Ok(t) => t,
 			Err(e) => {
-				let err_msg = format_err_msg(&e);
+				let err_msg = e.format_err_msg();
 				exit_gracefully(msg, &err_msg)
 			}
 		}
@@ -46,11 +46,10 @@ where
 	fn hint(self, hint: &str) -> Result<T, HintedError<E>> {
 		match self {
 			Ok(t) => Ok(t),
-			Err(e) => Err(HintedError::from_hint(e, hint)),
+			Err(e) => Err(HintedError::with_hint(e, hint)),
 		}
 	}
 }
-
 
 fn exit_gracefully<S>(msg: S, err_msg: S) -> !
 where
@@ -64,15 +63,56 @@ where
 	std::process::exit(1);
 }
 
-/// Format an error to display its contents to a CLI user.
+
+// Any error which can be formatted by this crate.
+pub trait GiveupFormatError: Send + Sync {
+	/// Format an error to display its contents to a CLI user.
+	fn format_err_msg(&self) -> String;
+}
+
+cfg_if::cfg_if! {
+	if #[cfg(feature = "anyhow")] {
+		impl GiveupFormatError for anyhow::Error {
+			fn format_err_msg(&self) -> String {
+				// The Display implementation of an `anyhow::Error` matches
+				// the one of the outer most contained error.
+				let mut err_msg = format!("{self}\n");
+
+				// `anyhow::Error::chain` is the same as manually going back
+				// through all the error's sources.
+				let mut cause_chain = self.chain();
+				cause_chain.next();  // Skip duplicate error.
+				for cause in cause_chain {
+					let cause_msg = format!("Caused by: {cause}\n");
+					err_msg.push_str(&cause_msg);
+				}
+
+				err_msg
+			}
+		}
+	} else {
+		impl<T> GiveupFormatError for T
+		where
+			T: std::error::Error + Send + Sync,
+		{
+			fn format_err_msg(&self) -> String {
+				// The logic behind the formatting lives outside of the implementation
+				// so it is still accessable even if this implementation is not compiled
+				// (i.e. if the anyhow features is enabled). This is required in testing.
+				format_err_msg(self)
+			}
+		}
+	}
+}
+
 fn format_err_msg(
-	error: &(dyn std::error::Error + Send + Sync),
+	err:  &(dyn std::error::Error + Send + Sync),
 ) -> String {
-	// Error message starts with the display implementation.
-	let mut err_msg = format!("{error}\n");  
+	// Error message starts with the Display implementation.
+	let mut err_msg = format!("{err}\n");  
 
 	// Add the error messages of the original's sources to the message.
-	let mut current = error.source();
+	let mut current = err.source();
 	while let Some(cause) = current {
 		let cause_msg = format!("Caused by: {cause}\n");
 		err_msg.push_str(&cause_msg);
@@ -82,6 +122,7 @@ fn format_err_msg(
 
 	err_msg
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -139,47 +180,63 @@ mod tests {
 		}
 	}
 	
-	#[test]
-	fn error_messages_are_correct_for_flat_errors() {
-		// Assert that an error without a `source` is correctly formatted.
-		let flat_err = FlatErr {};
-		let result = format_err_msg(&flat_err);
-		assert_eq!(result, format!("{FLAT_SRC_MSG}\n"));
-	}
+	cfg_if::cfg_if!{
+		if #[cfg(feature = "anyhow")] {
+			#[test]
+			fn formatting_of_anyhow_errors_does_not_deviate() {
+				// Assert that an error wrapped in an `anyhow::Error` is displayed
+				// the same way as a raw error.
 
-	#[test]
-	fn error_messages_are_correct_for_errors_with_a_source() {
-		// Assert that an error which has a `source` is correctly formatted.
-		let single_src_err = SingleSourceErr {};
-		let result = format_err_msg(&single_src_err);
-		assert_eq!(result, format!("{SINGLE_SRC_MSG}\nCaused by: {FLAT_SRC_MSG}\n"));
-	}
+				let raw_err = FlatErr {};		
+				let raw_err_msg = format_err_msg(&raw_err);
+				let anyhow_res: anyhow::Result<()> = Err(anyhow::Error::new(raw_err));
+				let anyhow_err_msg = anyhow_res.unwrap_err().format_err_msg();
+				assert_eq!(raw_err_msg, anyhow_err_msg);
+			}
+		} else {
+			#[test]
+			fn error_messages_are_correct_for_flat_errors() {
+				// Assert that an error without a `source` is correctly formatted.
+				let flat_err = FlatErr {};
+				let result = flat_err.format_err_msg();
+				assert_eq!(result, format!("{FLAT_SRC_MSG}\n"));
+			}
 
-	#[test]
-	fn error_messages_are_correct_for_multi_source_errors() {
-		// Assert that an error which has multiple sources is correctly formatted.
-		let multi_src_err = MultiSourceErr {};
-		let result = format_err_msg(&multi_src_err);
-		assert_eq!(result, format!("{MULTI_SRC_MSG}\nCaused by: {SINGLE_SRC_MSG}\nCaused by: {FLAT_SRC_MSG}\n"));
-	}
+			#[test]
+			fn error_messages_are_correct_for_errors_with_a_source() {
+				// Assert that an error which has a `source` is correctly formatted.
+				let single_src_err = SingleSourceErr {};
+				let result = single_src_err.format_err_msg();
+				assert_eq!(result, format!("{SINGLE_SRC_MSG}\nCaused by: {FLAT_SRC_MSG}\n"));
+			}
 
-	#[test]
-	fn hints_are_added_correctly() {
-		// Assert that errors are correctly combined and formatted with hints.
-		let raw_result: Result<(), FlatErr> = Err(FlatErr {});
-		let with_hint = raw_result.hint(HINT_MSG);
-		let err_msg = format_err_msg(&with_hint.unwrap_err());
-		assert_eq!(err_msg, format!("{FLAT_SRC_MSG}\n{HINT_MSG}\n"));
-	}
+			#[test]
+			fn error_messages_are_correct_for_multi_source_errors() {
+				// Assert that an error which has multiple sources is correctly formatted.
+				let multi_src_err = MultiSourceErr {};
+				let result = multi_src_err.format_err_msg();
+				assert_eq!(result, format!("{MULTI_SRC_MSG}\nCaused by: {SINGLE_SRC_MSG}\nCaused by: {FLAT_SRC_MSG}\n"));
+			}
 
-	#[test]
-	fn examples_are_added_correctly() {
-		// Assert that errors are correctly combinded and formatted with hints AND examples.
-		use crate::Example;
-		let raw_result: Result<(), FlatErr> = Err(FlatErr {});
-		let with_hint = raw_result.hint(HINT_MSG);
-		let with_example = with_hint.example(EXAMPLE_MSG);
-		let err_msg = format_err_msg(&with_example.unwrap_err());
-		assert_eq!(err_msg, format!("{FLAT_SRC_MSG}\n{HINT_MSG}: `{EXAMPLE_MSG}`\n"));
+			#[test]
+			fn hints_are_added_correctly() {
+				// Assert that errors are correctly combined and formatted with hints.
+				let raw_result: Result<(), FlatErr> = Err(FlatErr {});
+				let with_hint = raw_result.hint(HINT_MSG);
+				let err_msg = with_hint.unwrap_err().format_err_msg();
+				assert_eq!(err_msg, format!("{FLAT_SRC_MSG}\n{HINT_MSG}\n"));
+			}
+
+			#[test]
+			fn examples_are_added_correctly() {
+				// Assert that errors are correctly combinded and formatted with hints AND examples.
+				use crate::Example;
+				let raw_result: Result<(), FlatErr> = Err(FlatErr {});
+				let with_hint = raw_result.hint(HINT_MSG);
+				let with_example = with_hint.example(EXAMPLE_MSG);
+				let err_msg = with_example.unwrap_err().format_err_msg();
+				assert_eq!(err_msg, format!("{FLAT_SRC_MSG}\n{HINT_MSG}: `{EXAMPLE_MSG}`\n"));
+			}
+		}
 	}
 }

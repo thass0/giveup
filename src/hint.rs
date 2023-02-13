@@ -1,3 +1,5 @@
+use crate::giveup::GiveupFormatError;
+
 /// Add an example message to an object.
 pub trait Example<'a> {
 	/// Consumes and returns `self` combined with the
@@ -30,11 +32,11 @@ pub struct HintedError<'a, E> {
 
 impl<'a, E> HintedError<'a, E>
 where
-	E: std::error::Error + Send + Sync,
+	E: GiveupFormatError,
 {
 	/// Create a new error wrapper which combines the given error with
 	/// a hint on how to resolve the error.
-	pub fn from_hint(e: E, hint: &'a str) -> Self {
+	pub fn with_hint(e: E, hint: &'a str) -> Self {
 		Self {
 			e,
 			hint: Hint{ hint, example: None },
@@ -42,24 +44,14 @@ where
 	}
 }
 
-impl<'a, E> std::error::Error for HintedError<'a, E>
+impl<'a, E> GiveupFormatError for HintedError<'a, E>
 where
-	E: std::error::Error + Send + Sync,
+	E: GiveupFormatError,
 {
-	/// Delegate source to the wrapped error.
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		self.e.source()
-	}
-}
-
-impl<'a, E> std::fmt::Display for HintedError<'a, E>
-where
-	E: std::fmt::Display + Send + Sync,
-{
-	/// Print the wrapped error along with the hint. This method
-	/// only prints the `Display` implementation of the error.
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-		write!(f, "{}\n{}", self.e, self.hint)
+	fn format_err_msg(&self) -> String {
+		// The hinted error message is made up of the raw error
+		// message followed by the hint.
+		format!("{}{}\n", self.e.format_err_msg(), self.hint)
 	}
 }
 
