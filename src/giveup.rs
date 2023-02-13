@@ -105,6 +105,9 @@ cfg_if::cfg_if! {
 	}
 }
 
+// In case the anyhow feature is enabled, this function is required
+// for testing purposes only.
+#[cfg_attr(feature = "anyhow", cfg(test))]
 fn format_err_msg(
 	err:  &(dyn std::error::Error + Send + Sync),
 ) -> String {
