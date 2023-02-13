@@ -14,9 +14,15 @@ where
 	/// use giveup::Giveup;
 	/// fn main() {
 	/// 	let mut input = String::new();
+	/// # // cfg_if is used to get the doc test passing.
+	/// # cfg_if::cfg_if! {
+	/// 	# if #[cfg(feature = "anyhow")] {
+	/// 	# } else {
 	/// 	io::stdin().read_line(&mut input)
 	/// 	// Instead of panicing a user-geared error message is displayed
 	/// 		.giveup("Failed to read input");
+	///		# }
+	/// # }
 	/// }
 	/// ```
 	fn giveup(self, msg: &str) -> T;

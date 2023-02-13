@@ -16,5 +16,5 @@ anyhow = ["dep:anyhow"]
 
 [dependencies]
 colored = "2"
-anyhow = { version = "1.0.69", optional = true }
+anyhow = { version = "1.0", optional = true }
 cfg-if = "1.0.0"

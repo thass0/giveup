@@ -9,15 +9,20 @@
 //! ## Example
 //!
 //! ```rust should_panic
+//! # cfg_if::cfg_if!{
+//!     # if #[cfg(feature = "anyhow")] {
+//!        # panic!()  // required to get tests to pass
+//!     # } else {
 //! # use std::fs::File;
 //! # use giveup::{Giveup, Example};
 //! // Here reading the config at the start of the cli app
 //! // fails because the user has not yet created a config file.
-//! 
 //! let config_file = File::open("config-path")
 //!     .hint("Create a configuration file")
 //!     .example("touch config-filename")
 //!     .giveup("Missing configuration file");
+//!     # }
+//! # }
 //! ```
 //!
 //! ## Motivation
