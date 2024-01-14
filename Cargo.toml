@@ -3,9 +3,9 @@ name = "giveup"
 license = "MIT"
 description = "User-geared error messages and hints"
 version = "0.1.0"
-authors = ["Deckard"]
+authors = ["Thassilo Schulze"]
 edition = "2021"
-repository = "https://github.com/d4ckard/giveup"
+repository = "https://github.com/thass0/giveup"
 keywords = ["errors", "cli", "hints"]
 categories = ["command-line-interface", "rust-patterns"]
 
