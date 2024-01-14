@@ -54,7 +54,7 @@
 //! ## Feedback
 //!
 //! I primarily wrote `giveup` for my personal use so I would love
-//! to get your [feedback](https://github.com/d4ckard/giveup/issues).
+//! to get your [feedback](https://github.com/thass0/giveup/issues).
 //!
 //!
 
